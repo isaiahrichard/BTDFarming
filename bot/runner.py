@@ -41,6 +41,8 @@ class Runner:
         self.from_step = 0                  # resume point for the first game (--from-step)
         self.tier_overrides: dict[str, str] = {}   # tower id -> crosspath (--set-tiers)
         self.selected: str | None = None    # tower whose upgrade panel we believe is open
+        self.wins = 0                       # games won this run (for the summary line)
+        self.started_at: float | None = None
         self.fail_count: dict[Action, int] = {}   # consecutive failures per action
         self.min_cash: dict[Action, int] = {}     # don't retry an action until cash exceeds this
         self.clearly_red_min = 45.0         # above this a probe is red beyond doubt: don't even click
@@ -158,24 +160,38 @@ class Runner:
         raise BotStopped(f"couldn't get back to the home screen; screenshot: {self.save_debug(img, 'not_home')}")
 
     # ---------------------------------------------------------------- top level
-    def run(self, games: int, start_in: str) -> None:
+    def run(self, games: int | None, start_in: str) -> None:
+        """Play `games` games, or keep going until stopped when games is None (--forever)."""
         # Keypresses go to the focused window, which is the terminal that launched us.
         # Click a spot where nothing can be placed (castle stone) to focus the game first.
         # In game the castle-area safe spot is fine; on the home screen that spot sits next to
         # Play Social, so focus by clicking empty sand in front of the statue instead.
         self.inp.click(*(self.cfg["game"]["home_focus_px"] if start_in == "menu" else self.cfg["game"]["safe_click_px"]))
         time.sleep(0.5)
-        for game in range(1, games + 1):
-            log.info("=== game %d/%d ===", game, games)
+        self.started_at = time.monotonic()
+        game = 0
+        while games is None or game < games:
+            game += 1
+            log.info("=== game %d%s ===", game, "" if games is None else f"/{games}")
             if start_in == "menu" or game > 1:
                 self.go_home()
                 self.run_flow("new_game")
             won = self.play_game()
             if not won:
                 raise BotStopped("game lost after using all retries")
-            if game < games:
+            self.wins += 1
+            log.info("SUMMARY: %s", self.summary())
+            if games is None or game < games:
                 self.go_home()      # Victory -> rewards -> any event screens -> home
-        log.info("finished %d game(s)", games)
+        log.info("finished %d game(s)", game)
+
+    def summary(self) -> str:
+        """One line for the log: wins, time, pace, monkey money (Dark Castle CHIMPS = $240/win)."""
+        if self.started_at is None:
+            return "no games played"
+        mins = (time.monotonic() - self.started_at) / 60
+        pace = f", {mins / self.wins:.1f} min/win" if self.wins else ""
+        return f"{self.wins} win(s) in {int(mins // 60)}h{int(mins % 60):02d}m{pace}, ~${240 * self.wins} monkey money"
 
     # ---------------------------------------------------------------- one game
     def play_game(self) -> bool:

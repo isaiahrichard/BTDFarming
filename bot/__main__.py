@@ -44,6 +44,8 @@ def main(argv: list[str] | None = None) -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--strategy", default=ROOT / "strategies" / "dark_castle_chimps.yaml", type=Path)
     ap.add_argument("--games", type=int, default=1, help="games to play before stopping")
+    ap.add_argument("--forever", action="store_true",
+                    help="keep playing games until stopped (hotkey / Ctrl+C / STOP file)")
     ap.add_argument("--start", choices=["ingame", "menu"], default="ingame",
                     help="ingame = a fresh CHIMPS game is already open at round 6 (default)")
     ap.add_argument("--from-step", type=int, default=0,
@@ -79,13 +81,16 @@ def main(argv: list[str] | None = None) -> int:
     # from the shell, and Python keeps that, so the hotkey would do nothing. Re-enable it.
     signal.signal(signal.SIGINT, signal.default_int_handler)
     try:
-        runner.run(games=args.games, start_in=args.start)
+        runner.run(games=None if args.forever else args.games, start_in=args.start)
     except BotStopped as e:
         log.error("STOPPED at round %s: %s", runner.round, e)
+        log.info("SUMMARY: %s", runner.summary())
+        notify(f"BTD bot stopped: {runner.summary()}")
         return 1
     except KeyboardInterrupt:
         log.warning("stopped by hotkey / Ctrl+C at round %s", runner.round)
-        notify(f"BTD bot stopped at round {runner.round}")
+        log.info("SUMMARY: %s", runner.summary())
+        notify(f"BTD bot stopped at round {runner.round}: {runner.summary()}")
         return 130
     return 0
 
