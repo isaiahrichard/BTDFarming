@@ -155,3 +155,13 @@ def test_layout_targets_cover_every_placement():
     steps = yaml.safe_load((ROOT / "strategies" / "dark_castle_chimps.yaml").read_text())["steps"]
     placed = {st["place"]["id"] for st in steps if "place" in st}
     assert set(RECORDED_TARGETS) == placed
+
+
+def test_wait_until_accepts_numpy_results():
+    # Regression (2026-11-08): `if result:` on a returned screenshot raised ValueError mid-game.
+    import numpy as np
+    from bot.runner import Runner
+    assert Runner.wait_until(lambda: np.zeros((4, 4, 3)), timeout=0.1) is not None
+    assert Runner.wait_until(lambda: None, timeout=0.1) is None
+    assert Runner.wait_until(lambda: False, timeout=0.1) is False
+    assert Runner.wait_until(lambda: (0, 1, 3), timeout=0.1) == (0, 1, 3)

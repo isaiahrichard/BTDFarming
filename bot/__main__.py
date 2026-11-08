@@ -64,7 +64,8 @@ def main(argv: list[str] | None = None) -> int:
     inp = Input(cfg["display"], dry_run=args.dry_run)
     vision = Vision(ROOT / "templates", cfg["vision"], park=inp.park,
                     screen_px=tuple(cfg["display"]["screen_px"]),
-                    refocus=lambda: inp.click(*cfg["game"]["safe_click_px"]))
+                    refocus=lambda: inp.click(*cfg["game"]["safe_click_px"]),
+                    output=cfg["display"].get("output"))
     make_strategy = lambda: Strategy.load(args.strategy, ROOT / "strategies" / "costs_hard.yaml",
                                           cfg["village"]["px_per_unit"])
     runner = Runner(cfg, inp, vision, make_strategy, ROOT / "logs", stop_file)

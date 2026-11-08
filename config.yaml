@@ -17,7 +17,7 @@ hotkeys:
   # moving the cursor over the shop panel instead (input.park() does that).
 
 game:
-  auto_start: false             # turned off in game settings: bot buys between rounds, then presses play
+  auto_start: true              # on (2026-11-08): with fast placement the bot buys right at round start
   fast_forward: true
   hero_tile_px: [3420, 450]     # hero tile at the top of the shop (the hero hotkey scrolls it into view)
   # Empty map at the bottom, below the gate: outside both upgrade-panel areas (left x<850,
@@ -36,6 +36,7 @@ game:
 # Verified 2026-11-07: BTD6 fullscreen on the 4K monitor.
 display:
   screen_px: [3840, 2160]       # physical pixels of the game monitor
+  output: HDMI-A-1              # KWin's name for the game monitor (kscreen-doctor -o); used for fast capture
   scale: 1.65                   # KDE scale factor of that monitor
   logical_size: [2328, 1310]    # screen_px / scale
   # Home = pin cursor to the 4K's top-right corner, then move relatively:
@@ -43,7 +44,7 @@ display:
   home_move: [20000, -20000]
 
 vision:
-  poll_interval_s: 0.75
+  poll_interval_s: 0.15          # screenshots take ~50 ms now (KWin capture), so look often
   match_threshold: 0.85         # TM_CCOEFF_NORMED score needed to call a template "found"
   match_scale: 0.5              # downscale before matching (4x fewer pixels)
   region_margin_px: 80          # search this far around a template's recorded box

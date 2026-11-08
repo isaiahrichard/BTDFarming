@@ -35,7 +35,8 @@ CFG = yaml.safe_load((ROOT / "config.yaml").read_text())
 
 
 def vision(park=lambda: None) -> Vision:
-    return Vision(ROOT / "templates", CFG["vision"], park=park, screen_px=tuple(CFG["display"]["screen_px"]))
+    return Vision(ROOT / "templates", CFG["vision"], park=park, screen_px=tuple(CFG["display"]["screen_px"]),
+                  output=CFG["display"].get("output"))
 
 
 def load(path: str):
@@ -132,7 +133,8 @@ def cmd_layout(a):
     inp = Input(CFG["display"])
     v = Vision(ROOT / "templates", CFG["vision"], park=inp.park,
                screen_px=tuple(CFG["display"]["screen_px"]),
-               refocus=lambda: inp.click(*CFG["game"]["safe_click_px"]))
+               refocus=lambda: inp.click(*CFG["game"]["safe_click_px"]),
+               output=CFG["display"].get("output"))
     r = Runner(CFG, inp, v, make_strategy=None, logs_dir=ROOT / "logs", stop_file=ROOT / "STOP")
     r.click_unclear = False   # the layout pass needs the exact closest spot, so no trial clicks
     ox, oy = CFG["game"]["placement_pointer_offset_px"]

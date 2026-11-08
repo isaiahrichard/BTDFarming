@@ -40,6 +40,7 @@ class Runner:
         self.stop_file = stop_file
         self.from_step = 0                  # resume point for the first game (--from-step)
         self.tier_overrides: dict[str, str] = {}   # tower id -> crosspath (--set-tiers)
+        self.selected: str | None = None    # tower whose upgrade panel we believe is open
         self.fail_count: dict[Action, int] = {}   # consecutive failures per action
         self.min_cash: dict[Action, int] = {}     # don't retry an action until cash exceeds this
         self.clearly_red_min = 45.0         # above this a probe is red beyond doubt: don't even click
@@ -51,6 +52,22 @@ class Runner:
         self.keys = cfg["hotkeys"]
 
     # ---------------------------------------------------------------- helpers
+    @staticmethod
+    def wait_until(check, timeout: float, interval: float = 0.05):
+        """Call check() until it returns something truthy (returned) or timeout (None).
+
+        With ~50 ms screenshots it's cheaper to look again than to sleep a fixed, worst-case
+        amount; most game reactions take 1-3 frames.
+        """
+        deadline = time.monotonic() + timeout
+        while True:
+            result = check()
+            # Not `if result:` -- check() may return a numpy image, whose truth value is
+            # ambiguous. None/False mean "not yet"; anything else is the answer.
+            if (result is not None and result is not False) or time.monotonic() >= deadline:
+                return result
+            time.sleep(interval)
+
     def check_stop(self) -> None:
         if self.stop_file.exists():
             raise BotStopped(f"{self.stop_file} exists — stopping as requested")
@@ -203,6 +220,7 @@ class Runner:
                 if retries_left <= 0:
                     log.error("defeat on round %s and no retries left", last_round)
                     return False
+                self.selected = None
                 if not self.retry_last_round(img):
                     return False
                 retries_left -= 1
@@ -255,7 +273,9 @@ class Runner:
             # auto-start is off). Like a human: collect the end-of-round bonus, buy everything
             # affordable (handled above), and only then press play.
             play_btn = self.vision.find("ingame_play", img)
-            if play_btn and (cash is not None or unreadable >= 3):
+            # After round 100 the play button is just the game ending: pressing it would
+            # start freeplay. Wait for the reward popup / Victory card instead.
+            if play_btn and (last_round or 0) < 100 and (cash is not None or unreadable >= 3):
                 if cash is None:
                     log.warning("cash unreadable for %d frames; starting the round anyway", unreadable)
                 self.start_round(play_btn)
@@ -265,25 +285,21 @@ class Runner:
     def start_round(self, play_btn: tuple[int, int]) -> None:
         """Press play, then make sure fast-forward is ON by looking at the button.
 
-        Once a round runs, the same button toggles fast-forward. The game keeps the setting
-        between rounds and through retries, so counting clicks went wrong; reading the
-        button's state (glowing = on) can't drift.
+        Once a round runs, the same button toggles fast-forward. Whether the game keeps the
+        setting (between rounds, after a retry) varies, so read the button (glowing = on)
+        rather than count clicks.
         """
         self.inp.click(*play_btn)
-        time.sleep(0.6)
         if not self.cfg["game"]["fast_forward"]:
             log.info("round started")
             return
         for attempt in range(3):
-            state = self.vision.fast_forward_state(self.vision.screenshot())
+            state = self.wait_until(lambda: self.vision.fast_forward_state(self.vision.screenshot()), timeout=1.0)
             if state == "on":
                 break
             if state == "off":
                 self.inp.click(*play_btn)
                 log.info("fast-forward was off: turned it on")
-                time.sleep(0.6)
-                continue
-            time.sleep(0.4)        # button not readable yet (animation): look again
         else:
             log.warning("couldn't confirm fast-forward is on")
         log.info("round started")
@@ -314,43 +330,29 @@ class Runner:
         else:
             self.set_target(strat, action)
 
-    def cash_dropped(self, before: int, cost: int) -> tuple[bool, int | None]:
-        """Did spending happen? Income keeps arriving, so accept a drop of half the cost."""
-        time.sleep(0.25)
-        img = self.vision.screenshot()
-        after = self.vision.read_cash(img)
-        if after is None:
-            # Unreadable cash can mean the game just ended under us (the end screens dim the
-            # HUD). Hand back to the main loop, which knows how to retry or celebrate.
-            for screen in ("defeat_text", "victory_text", "insta_monkey_banner"):
-                if self.vision.find(screen, img):
-                    raise GameEnded(screen)
-            return False, None
-        return before - after >= cost * 0.5, after
-
     def pick_up(self, kind: str, target: tuple[float, float]):
         """Pick up a tower with the pointer at `target`. Returns the background screenshot
         (taken before pickup, for the redness comparison), or None if nothing got held."""
         key = self.keys["towers"]["hero" if kind.startswith("hero_") else kind]
         # Order matters: be at the spot *before* picking the tower up. Any move_to() while
         # holding a tower re-homes over the shop panel, which cancels the placement.
+        self.selected = None              # picking a tower up closes any upgrade panel
         self.inp.move_to(*target)
         before_img = self.vision.screenshot(park=False)  # background, nothing held yet
         self.inp.key(key)
-        time.sleep(0.3)
         if kind.startswith("hero_"):
             # Heroes are different: the hotkey only scrolls the shop to the hero tile and
             # highlights it. Clicking the tile picks the hero up; then carry it to the spot.
             tx, ty = self.cfg["game"]["hero_tile_px"]
+            time.sleep(0.15)              # let the shop scroll to the hero tile
             self.inp.move_to(tx, ty)      # homing over the shop is fine: nothing held yet
             self.inp.click_here()
-            time.sleep(0.2)
+            time.sleep(0.1)
             self.inp.move_by(target[0] - tx, target[1] - ty)
-            time.sleep(0.2)
         # The red "X" cancel button only shows while something is held. Without this check a
         # pickup that silently failed would look "valid" (no red circle) and we'd click an
         # empty map.
-        if not self.is_holding():
+        if not self.wait_until(self.is_holding, timeout=0.8):
             log.warning("pressed %r but nothing is held", key)
             self.inp.park()
             return None
@@ -362,8 +364,7 @@ class Runner:
     def drop_here(self) -> bool:
         """Click to place the held tower. True if it left the cursor (the red X vanished)."""
         self.inp.click_here()
-        time.sleep(0.3)
-        if self.is_holding():
+        if not self.wait_until(lambda: not self.is_holding(), timeout=0.6):
             self.inp.park()   # still held = the spot was refused; drop it over the shop panel
             return False
         return True
@@ -384,10 +385,7 @@ class Runner:
             if not self.placed_by_click and not self.drop_here():
                 log.warning("click at %s didn't place %s (still held)", pointer, action.tower_id)
                 continue
-            ok, after = self.cash_dropped(cash_before, action.cost)
-            if not ok:
-                # The X vanished, so the game took it; trust that over a noisy cash reading.
-                log.info("%s placed (X gone) though cash read %s -> %s", action.tower_id, cash_before, after)
+            # The red X vanishing already proves the game took it (cash checks were noisy).
             if landed != action.pos:
                 log.info("%s landed at %s (strategy said %s)", action.tower_id, landed, action.pos)
             strat.complete(action, landed)   # later upgrade clicks aim at where it really is
@@ -411,7 +409,7 @@ class Runner:
             mx, my = self.inp.move_by(x - cur[0], y - cur[1])
             cur[0] += mx
             cur[1] += my
-            time.sleep(0.15)  # let the held tower follow the cursor
+            time.sleep(0.1)   # let the held tower follow the cursor (a few frames)
             tower = (cur[0] - ox, cur[1] - oy)
             img = self.vision.screenshot(park=False)
             delta = self.vision.placement_redness(before_img, img, tower)
@@ -424,8 +422,7 @@ class Runner:
                 # unclear spot gets the definitive test: click. An invalid spot just refuses
                 # (the tower stays held); a valid one places it and the red X disappears.
                 self.inp.click_here()
-                time.sleep(0.3)
-                if not self.is_holding():
+                if self.wait_until(lambda: not self.is_holding(), timeout=0.4):
                     log.debug("click at unclear spot (%d, %d) placed it", cur[0], cur[1])
                     self.placed_by_click = True
                     return True
@@ -462,17 +459,22 @@ class Runner:
         probe(*good)
         return tuple(cur)
 
-    def select_tower(self, pos: tuple[int, int]) -> None:
-        """Open a tower's upgrade panel, reliably.
+    def select_tower(self, pos: tuple[int, int]):
+        """Open a tower's upgrade panel, reliably. Returns a screenshot showing it (or None).
 
         Clicking a tower that is *already* selected deselects it, so first click empty
         ground to clear any selection, then click the tower.
         """
+        self.selected = None
         self.inp.click(*self.cfg["game"]["safe_click_px"])
-        time.sleep(0.2)
+        time.sleep(0.1)
         dx, dy = self.cfg["game"]["select_offset_px"]
         self.inp.click(pos[0] + dx, pos[1] + dy)   # the tower's real centre, below its recorded spot
-        time.sleep(0.3)
+
+        def panel_shot():
+            img = self.vision.screenshot()
+            return img if self.vision.panel_side(img) else None
+        return self.wait_until(panel_shot, timeout=1.0)
 
     def fresh_cash(self) -> int | None:
         """Read cash from a brand-new screenshot (raises GameEnded if an end screen shows)."""
@@ -498,29 +500,46 @@ class Runner:
         """
         tower = strat.towers[action.tower_id]
         key = self.keys["upgrades"][action.path]
-        self.select_tower(action.pos)
-        img = self.vision.screenshot()
-        real = self.vision.read_panel_tiers(img)
+        img, real, fresh = None, None, False
+        if self.selected == action.tower_id:
+            # Panel should still be open from the previous upgrade on this tower: skip the
+            # close-and-reopen. Only trust it if the tiers are exactly what we expect.
+            img = self.vision.screenshot()
+            real = self.vision.read_panel_tiers(img)
+            if real is None or list(real) != tower.tiers:
+                img, real = None, None
+        if img is None:
+            img = self.select_tower(action.pos)
+            fresh = True
+            real = self.vision.read_panel_tiers(img) if img is not None else None
         if real is None:
             self.fail_count[action] = self.fail_count.get(action, 0) + 1
             log.warning("%s: upgrade panel didn't open (%d)", action.tower_id, self.fail_count[action])
             if self.fail_count[action] >= 8:
+                shot = img if img is not None else self.vision.screenshot()
                 raise BotStopped(f"round {self.round}: can't open {action.tower_id}'s panel; screenshot: "
-                                 f"{self.save_debug(img, 'no_panel')}")
+                                 f"{self.save_debug(shot, 'no_panel')}")
             return
-        if list(real) != tower.tiers:
+        if fresh and list(real) != tower.tiers:
             log.warning("%s: panel shows %s but expected %s; syncing to the game",
                         action.tower_id, "-".join(map(str, real)), "-".join(map(str, tower.tiers)))
             strat.set_tiers(action.tower_id, "-".join(map(str, real)))
+            self.selected = action.tower_id
             return                         # main loop re-plans from the true state
+        self.selected = action.tower_id
         pre = self.vision.read_cash(img)
         if pre is None or pre < action.cost:
             return
         self.inp.key(key)
-        time.sleep(0.4)
-        img = self.vision.screenshot()
-        after = self.vision.read_panel_tiers(img)
-        if after is not None and after[action.path] == tower.tiers[action.path] + 1:
+        want = tower.tiers[action.path] + 1
+
+        def tiers_now():
+            t = self.vision.read_panel_tiers(self.vision.screenshot())
+            return t if t is not None and t[action.path] == want else None
+        after = self.wait_until(tiers_now, timeout=0.7)
+        if after is None:
+            after = self.vision.read_panel_tiers(self.vision.screenshot())
+        if after is not None and after[action.path] == want:
             strat.complete(action)
             self.fail_count.pop(action, None)
             return
@@ -540,10 +559,13 @@ class Runner:
 
     def set_target(self, strat: Strategy, action: Action) -> None:
         step = strat.steps[action.step_index]["target"]
-        self.select_tower(action.pos)
+        if self.select_tower(action.pos) is None:
+            log.warning("%s: panel didn't open for targeting; will retry", action.tower_id)
+            return
         self.inp.key(self.keys["target_next"], times=action.tab_presses)
         if step.get("camo_priority"):
             self.ensure_camo_priority(action.tower_id)
+        self.selected = action.tower_id
         strat.complete(action)   # targeting itself isn't verifiable from the HUD; trust the keys
 
     def ensure_camo_priority(self, tower_id: str) -> None:

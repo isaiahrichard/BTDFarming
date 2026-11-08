@@ -24,7 +24,7 @@ LEFT_CLICK = "0xC0"  # ydotool: 0x40 = press, 0x80 = release, low bits 0 = left 
 
 
 class Input:
-    def __init__(self, display: dict, settle_s: float = 0.08, dry_run: bool = False):
+    def __init__(self, display: dict, settle_s: float = 0.04, dry_run: bool = False):
         self.scale = display["scale"]
         self.logical_w = display["logical_size"][0]
         self.home_move = display["home_move"]

@@ -29,11 +29,18 @@ GLYPH_SIZE = (24, 36)  # every glyph is resized to this before comparing
 class Vision:
     def __init__(self, templates_dir: Path, cfg: dict, park: Callable[[], None],
                  screen_px: tuple[int, int] = (3840, 2160),
-                 refocus: Callable[[], None] | None = None):
+                 refocus: Callable[[], None] | None = None, output: str | None = None):
         self.dir = Path(templates_dir)
         self.cfg = cfg
         self.park = park  # input.park, so the cursor is never in our screenshots
         self.refocus = refocus  # clicks the game if another window stole focus
+        self.kwin = None
+        if output:
+            try:
+                from .kwin_capture import KWinCapture
+                self.kwin = KWinCapture(output)
+            except Exception as e:
+                log.warning("KWin capture unavailable (%s); using spectacle", e)
         self.screen_px = tuple(screen_px)
         self.scale = cfg["match_scale"]
         regions_file = self.dir / "regions.yaml"
@@ -43,12 +50,26 @@ class Vision:
 
     # ---------------------------------------------------------------- screenshots
     def screenshot(self, park: bool = True) -> np.ndarray:
-        """Capture the 4K monitor as a BGR numpy array (OpenCV's channel order).
+        """Capture the game monitor as a BGR numpy array (OpenCV's channel order).
 
         park=False keeps the cursor where it is (needed while holding a tower: parking moves
-        over the shop panel, which drops it). Note `spectacle -m` captures the monitor of the
-        *focused window*, so the game must have focus.
+        over the shop panel, which drops it). Uses KWin's D-Bus capture (~50 ms) and falls
+        back to spectacle (~800 ms) if that ever fails.
         """
+        if park:
+            self.park()
+        if self.kwin is not None:
+            try:
+                img = self.kwin.grab()
+                if (img.shape[1], img.shape[0]) == self.screen_px:
+                    return img
+                log.warning("KWin capture is %sx%s, expected %s", img.shape[1], img.shape[0], self.screen_px)
+            except Exception as e:      # D-Bus hiccup: use the slow path this once
+                log.warning("KWin capture failed (%s); using spectacle", e)
+        return self._spectacle_screenshot(park)
+
+    def _spectacle_screenshot(self, park: bool) -> np.ndarray:
+        """Slow fallback. `spectacle -m` captures the monitor of the focused window."""
         got = None
         for attempt in range(4):
             if park:
