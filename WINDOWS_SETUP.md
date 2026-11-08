@@ -91,8 +91,14 @@ and re-check `tests/`.
 
 ## 5. Suggested implementation order
 
-1. Copy the project folder **except** `.venv/`, `logs/` and the two `Screencast_*.webm` videos
-   (≈10 GB, not needed). Keep `captures/` — the tests use it.
+1. Clone the private repo (log in to GitHub as **isaiahrichard** first, e.g. `gh auth login`):
+   ```
+   git clone https://github.com/isaiahrichard/BTDFarming.git
+   cd BTDFarming
+   git config user.email r.isaiah3415@gmail.com   # this repo only; keeps the work email out
+   ```
+   The repo already leaves out `.venv/`, `logs/` and the videos, and includes the
+   `captures/` screenshots the tests need.
 2. Install Python 3.12+ from python.org, then in the project folder:
    ```
    py -m venv .venv
