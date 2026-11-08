@@ -1,0 +1,34 @@
+# Where each template was cropped from, in 4K screen pixels: [x1, y1, x2, y2].
+# vision.find() searches this box plus a margin instead of the whole screen.
+# `python -m bot.tools crop` adds entries automatically.
+chimps_intro_banner: [1700, 700, 2140, 850]
+ingame_play: [3565, 1935, 3765, 2095]
+ingame_fastforward: [3565, 1935, 3765, 2095]
+retry_confirm_ok: [2024, 1370, 2536, 1540]
+insta_monkey_banner: [1340, 450, 2500, 610]
+hud_coins: [548, 20, 695, 135]
+defeat_text: [1470, 570, 2370, 795]   # retaken 2026-11-08 from live defeat screen
+defeat_home: [1134, 1494, 1380, 1740]   # retaken 2026-11-08 from live defeat screen
+defeat_restart: [1566, 1494, 1824, 1740]   # retaken 2026-11-08 from live defeat screen
+defeat_retry_last_round: [2454, 1494, 2706, 1740]   # retaken 2026-11-08 from live defeat screen
+holding_cancel_x: [3140, 180, 3260, 290]   # red X shown only while a tower is held
+sniper_camo_toggle_off: [700, 550, 825, 675]   # Sniper panel on the LEFT (sniper sits right of the gate)
+sniper_camo_toggle_on: [700, 550, 825, 675]    # same button with the red crosshair = camo priority on
+home_play: [1790, 1775, 2050, 2050]   # live capture 2026-11-08
+mapselect_expert: [2540, 1810, 2800, 2130]   # live capture 2026-11-08
+mapselect_next_arrow: [3240, 790, 3350, 940]   # live capture 2026-11-08
+mapselect_dark_castle: [1700, 868, 2140, 940]   # live capture 2026-11-08
+difficulty_hard: [2455, 985, 2720, 1075]   # live capture 2026-11-08
+mode_chimps: [3080, 1615, 3345, 1695]   # live capture 2026-11-08
+chimps_intro_ok: [1700, 1450, 2140, 1590]   # live capture 2026-11-08
+victory_text: [1450, 240, 2380, 440]   # live capture 2026-11-08
+victory_next: [1710, 1735, 2125, 1890]   # live capture 2026-11-08
+victory_home: [1320, 1575, 1560, 1815]   # live capture 2026-11-08
+event_collect: [1700, 1290, 2140, 1430]   # live capture 2026-11-08
+event_continue: [1665, 1915, 2165, 2085]   # live capture 2026-11-08
+event_back: [70, 30, 245, 205]   # live capture 2026-11-08
+event_title: [1480, 60, 2370, 200]   # live capture 2026-11-08
+popup_level_up: [1690, 1120, 2150, 1235]   # live capture 2026-11-08
+popup_knowledge_point: [1330, 1480, 2510, 1580]   # live capture 2026-11-08
+ingame_ff_on: [3565, 1935, 3765, 2095]    # fast-forward ON: glowing arrows, white rim (live 2026-11-08)
+ingame_ff_off: [3565, 1935, 3765, 2095]   # fast-forward OFF during a round

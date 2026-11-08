@@ -1,0 +1,75 @@
+# Machine + game settings for the bot. Strategy files (strategies/*.yaml) say *what* to do;
+# this file says *how* to do it on this machine.
+
+hotkeys:
+  towers:
+    sniper_monkey: z
+    monkey_sub: x
+    alchemist: f
+    druid: g
+    skywarden: s
+    monkey_village: k
+    glue_gunner: y
+    hero: u
+  upgrades: [q, w, e]       # index = path: top, middle, bottom
+  target_next: tab          # BTD6 default: cycles First -> Last -> Close -> Strong
+  # No cancel key: Esc opens the pause menu when nothing is held. A held tower is dropped by
+  # moving the cursor over the shop panel instead (input.park() does that).
+
+game:
+  auto_start: false             # turned off in game settings: bot buys between rounds, then presses play
+  fast_forward: true
+  hero_tile_px: [3420, 450]     # hero tile at the top of the shop (the hero hotkey scrolls it into view)
+  # Empty map at the bottom, below the gate: outside both upgrade-panel areas (left x<850,
+  # right x>2450) and the Defeat panel. The old (3000, 1850) sat on the right panel's SELL button!
+  safe_click_px: [2150, 2050]
+  home_focus_px: [1920, 1560]   # empty sand on the home screen (focus click for --start menu)
+  # Drag & Drop placement draws the held tower ABOVE the pointer, and the tower lands where it's
+  # drawn. Strategy positions are where towers ended up, so the pointer goes this far below them.
+  # Measured 2026-11-07: Skywarden at y=1225 turned valid between pointer y=1305 and 1325.
+  placement_pointer_offset_px: [0, 110]
+  # Strategy positions are where a tower's picture floats while dragging; its real centre (what a
+  # click hits) is lower. Clicking the recorded spot in the druid cluster selected a NEIGHBOUR and
+  # upgraded the wrong druid. Measured 2026-11-08: +65 px selects the intended tower every time.
+  select_offset_px: [0, 65]
+
+# Verified 2026-11-07: BTD6 fullscreen on the 4K monitor.
+display:
+  screen_px: [3840, 2160]       # physical pixels of the game monitor
+  scale: 1.65                   # KDE scale factor of that monitor
+  logical_size: [2328, 1310]    # screen_px / scale
+  # Home = pin cursor to the 4K's top-right corner, then move relatively:
+  #   dx = px / scale - logical_size[0],  dy = py / scale
+  home_move: [20000, -20000]
+
+vision:
+  poll_interval_s: 0.75
+  match_threshold: 0.85         # TM_CCOEFF_NORMED score needed to call a template "found"
+  match_scale: 0.5              # downscale before matching (4x fewer pixels)
+  region_margin_px: 80          # search this far around a template's recorded box
+  # Wide bands where the numbers can appear; the upgrade panel shifts them sideways, so the
+  # OCR anchors on the gold-coin icon (cash) and the "/" glyph (round) instead of fixed positions.
+  cash_band: [480, 15, 2100, 140]    # must fully contain the coin icon (x=548) in the normal layout
+  round_band: [1800, 50, 3130, 155]
+
+village:
+  # MEASURED 2026-11-08 from in-game prices: druid 373 px from the village was discounted, one at
+  # 402 px was not (village 0-0-2, no Bigger Radius = 40 units). Edge ~388 px -> 9.7 px/unit.
+  px_per_unit: 9.7
+
+loss_policy:
+  max_retries_per_game: 2       # "Retry last round" this many times, then stop the bot
+
+# Template sequences clicked in order. `optional: true` steps are skipped if not seen quickly.
+# Templates marked "capture" don't exist yet: run `python -m bot.tools --help` to make them.
+menu_flow:
+  new_game:                                  # captured live 2026-11-08
+    - {template: home_play}
+    - {template: mapselect_expert}
+    - {template: mapselect_dark_castle, page_with: mapselect_next_arrow, max_pages: 20}
+    - {template: difficulty_hard}
+    - {template: mode_chimps}
+    - {template: overwrite_ok, optional: true}   # only when a Dark Castle save exists; not captured yet
+    - {template: chimps_intro_ok, timeout: 60}   # after the loading screen
+  # After a win the bot uses Runner.go_home(), which reacts to whatever screen shows up
+  # (Victory card, rewards card, seasonal Collection Event, Insta reveals) until home.

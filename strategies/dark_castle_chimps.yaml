@@ -1,0 +1,70 @@
+# Dark Castle — Hard / CHIMPS — the user's own winning run.
+# Source: MoveOrder (authoritative order) + Screencast_20261107_203223.webm (positions, rounds).
+# Positions: tower centres in the 4K capture (3838x2158 frame ≈ the 3840x2160 screen); `at` = fraction of the frame.
+#   Measured at 1/4 scale then checked on full-res frames: expect ±10-15 px. The druid/alchemist cluster is tight, so
+#   the bot should verify each placement (cash dropped) and nudge-retry a few px if it fails.
+# Each upgrade line jumps straight to the listed crosspath (may be several tiers); the user bought each as soon as
+#   affordable, so the bot should gate on cash, not on `round`. `round` = when it happened in the video (reference only).
+#   Upgrade rounds are only given where the upgrade panel was actually seen; otherwise the comment gives the window.
+# Run notes: round 28 and round 99 were lost and redone with 'Retry last round'; around round 30 the user quit to
+#   the menu and resumed the save. Only the corrected actions are listed (e.g. an Ice Monkey tried on the first round-99
+#   retry is NOT part of the strategy; the Glue Gunner replaced it).
+
+map: dark_castle
+difficulty: hard
+mode: chimps
+hero: obyn
+screen: [3840, 2160]
+settings:
+  placement: drag_and_drop   # seen in the pause menu (Drag & Drop selected, Nudge Mode on)
+  fast_forward: true
+steps:
+  - {place: {id: skywarden1, tower: skywarden, at_px: [1800, 1225], at: [0.4688, 0.5671]}, round: 6}   # sandbox layout 2026-11-08 (target 1800, 1225)
+  - {place: {id: sub1, tower: monkey_sub, at_px: [2185, 735], at: [0.5690, 0.3403]}, round: 6}   # sandbox layout 2026-11-08 (target 2185, 740)
+  - {place: {id: skywarden2, tower: skywarden, at_px: [1182, 877], at: [0.3078, 0.4060]}, round: 6}   # sandbox layout 2026-11-08 (target 1195, 890)
+  - {place: {id: sniper1, tower: sniper_monkey, at_px: [2935, 1050], at: [0.7643, 0.4861]}, round: 8}   # sandbox layout 2026-11-08 (target 2935, 1050)
+  - {target: {id: sniper1, mode: strong}}
+  - {place: {id: obyn, tower: hero_obyn, at_px: [1737, 785], at: [0.4523, 0.3634]}, round: 11}   # sandbox layout 2026-11-08 (target 1745, 805)
+  - {place: {id: druid1, tower: druid, at_px: [1575, 770], at: [0.4102, 0.3565]}, round: 12}   # sandbox layout 2026-11-08 (target 1575, 775)
+  - {place: {id: druid2, tower: druid, at_px: [1428, 738], at: [0.3719, 0.3417]}, round: 15}   # sandbox layout 2026-11-08 (target 1435, 750)
+  - {upgrade: {id: sniper1, to: "0-1-1"}, round: 18}
+  - {target: {id: sniper1, mode: strong}}
+  - {upgrade: {id: sniper1, to: "0-2-1"}, round: 20}
+  - {target: {id: sniper1, mode: first, camo_priority: true}}   # ? MoveOrder says "(first, camo)" — exact toggle not visible in the video
+  - {place: {id: village1, tower: monkey_village, at_px: [1665, 450], at: [0.4336, 0.2083]}, round: 25}   # sandbox layout 2026-11-08 (target 1665, 455)
+  # Reordered 2026-11-08 (user): the druids' middle tier before Monkey Commerce gets the bot through round 28.
+  - {upgrade: {id: village1, to: "0-0-1"}}
+  - {upgrade: {id: druid1, to: "0-1-0"}}
+  - {upgrade: {id: druid2, to: "0-1-0"}}
+  - {upgrade: {id: village1, to: "0-0-2"}}
+  - {upgrade: {id: druid1, to: "0-1-1"}}
+  - {upgrade: {id: druid2, to: "0-1-1"}}
+  - {place: {id: druid3, tower: druid, at_px: [1885, 730], at: [0.4909, 0.3380]}, round: 30}   # sandbox layout 2026-11-08 (target 1885, 735)
+  - {upgrade: {id: druid3, to: "0-0-1"}}   # rounds 30-35
+  - {upgrade: {id: druid3, to: "1-0-1"}}   # rounds 30-35
+  - {upgrade: {id: druid3, to: "2-0-1"}}   # rounds 30-35
+  - {upgrade: {id: druid3, to: "3-0-1"}}   # done by round 35 (storm robe visible)
+  - {place: {id: druid4, tower: druid, at_px: [1345, 625], at: [0.3503, 0.2894]}, round: 35}   # sandbox layout 2026-11-08 (target 1375, 655)
+  - {place: {id: druid5, tower: druid, at_px: [1522, 622], at: [0.3964, 0.2880]}, round: 35}   # sandbox layout 2026-11-08 (target 1530, 630)
+  - {place: {id: alchemist1, tower: alchemist, at_px: [1667, 674], at: [0.4341, 0.3120]}, round: 36}   # sandbox layout 2026-11-08 (target 1655, 686)
+  - {place: {id: druid6, tower: druid, at_px: [1442, 507], at: [0.3755, 0.2347]}, round: 36}   # sandbox layout 2026-11-08 (target 1450, 525)
+  - {place: {id: druid7, tower: druid, at_px: [1806, 613], at: [0.4703, 0.2838]}, round: 37}   # sandbox layout 2026-11-08 (target 1818, 625)
+  - {upgrade: {id: druid4, to: "0-1-1"}}   # after round 37
+  - {upgrade: {id: druid5, to: "0-1-1"}}
+  - {upgrade: {id: druid6, to: "0-1-1"}}
+  - {upgrade: {id: druid7, to: "0-1-1"}}
+  - {upgrade: {id: alchemist1, to: "3-0-1"}}
+  - {upgrade: {id: druid3, to: "3-0-2"}}
+  - {upgrade: {id: druid3, to: "4-0-2"}}
+  - {upgrade: {id: druid1, to: "0-1-4"}}
+  - {upgrade: {id: druid2, to: "0-1-4"}}
+  - {upgrade: {id: druid6, to: "0-1-4"}}
+  - {upgrade: {id: village1, to: "2-0-2"}}
+  - {upgrade: {id: alchemist1, to: "4-0-1"}}
+  - {upgrade: {id: alchemist1, to: "5-0-1"}}
+  - {upgrade: {id: druid4, to: "0-1-4"}}
+  - {upgrade: {id: druid5, to: "0-1-4"}}
+  - {upgrade: {id: druid7, to: "0-1-4"}}
+  - {upgrade: {id: druid1, to: "0-1-5"}}
+  - {place: {id: glue1, tower: glue_gunner, at_px: [2012, 658], at: [0.5240, 0.3046]}, round: 99}   # sandbox layout 2026-11-08 (target 2012, 660)
+  - {upgrade: {id: glue1, to: "0-2-4"}, round: 99}

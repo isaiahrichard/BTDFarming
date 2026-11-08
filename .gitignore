@@ -1,0 +1,38 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Runtime output
+logs/
+STOP
+
+# Recordings (~10 GB)
+*.mp4
+*.webm
+
+# Screenshots: ignore all except the ones the tests use (4K fixtures, ~96 MB)
+captures/*
+!captures/ff_off_live.png
+!captures/ff_on_live.png
+!captures/ingame_r6_650.png
+!captures/insta_popup_recording.png
+!captures/menu_after_next.png
+!captures/menu_knowledge.png
+!captures/menu_levelup.png
+!captures/menu_rewards1.png
+!captures/menu_rewards2.png
+!captures/menu_rewards3.png
+!captures/menu_rewards4.png
+!captures/menu_rewards5.png
+!captures/menu_rewards6.png
+!captures/menu_rewards7.png
+!captures/menu_victory.png
+!captures/no_panel_r48.png
+!captures/panel_left_druid7.png
+!captures/panel_open_270.png
+!captures/panel_right_druid1.png
+!captures/sniper_panel_camo_on.png
+!captures/sniper_panel_r16.png
+!captures/stuck_panel_25.png

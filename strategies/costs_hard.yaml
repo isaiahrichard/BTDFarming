@@ -1,0 +1,226 @@
+# BTD6 Hard-difficulty prices (CHIMPS uses Hard prices). Game version: 57.4 (released 2026-10-23).
+# Data path: Bloons Wiki Module:PricesBTD6/data (Medium base prices, last edited 2026-08-06, "as of v56.0"),
+# plus the v57.x price changes from the wiki's v57.x balance-changes page (only Glue Gunner + Skywarden affected).
+# `cost` = Hard price computed with the wiki's own rule (see hard_rule); `medium` = wiki Medium price it came from.
+# Checked against every Hard price the wiki hard-codes (infobox base costs, cost-hard overrides, Obyn): all agree.
+# Prices exclude Monkey Knowledge (disabled in CHIMPS) and village discounts.
+source:
+  - https://bloons.fandom.com/wiki/Module:PricesBTD6/data
+  - https://bloons.fandom.com/wiki/Module:PricesBTD6
+  - https://bloons.fandom.com/wiki/Bloons_TD_6/Balance_changes/Version_57.x
+  - https://bloons.fandom.com/wiki/Difficulty
+  - https://bloons.fandom.com/wiki/Skywarden
+  - https://bloons.fandom.com/wiki/Druid
+  - https://bloons.fandom.com/wiki/Monkey_Sub_(BTD6)
+  - https://bloons.fandom.com/wiki/Sniper_Monkey_(BTD6)
+  - https://bloons.fandom.com/wiki/Monkey_Village_(BTD6)
+  - https://bloons.fandom.com/wiki/Alchemist
+  - https://bloons.fandom.com/wiki/Glue_Gunner_(BTD6)
+  - https://bloons.fandom.com/wiki/Obyn_Greenfoot_(BTD6)
+  - https://bloons.fandom.com/wiki/Monkey_Business
+  - https://bloons.fandom.com/wiki/Monkey_Commerce
+  - https://bloons.fandom.com/wiki/Discount
+  - https://bloons.fandom.com/wiki/Bigger_Radius
+  - https://bloons.fandom.com/wiki/Jungle_Drums_(BTD6)
+  - https://bloons.fandom.com/wiki/Range
+  - https://bloons.fandom.com/wiki/C.H.I.M.P.S.
+retrieved: 2026-11-07
+game_version: "57.4"
+hard_rule: >-
+  Hard = Medium x 1.08 (Difficulty page: "Tower and upgrade costs are increased by 8%"), rounded to a multiple of $5.
+  Exact rounding from Module:PricesBTD6 RoundToFive: drop the decimals first (floor), then round to the nearest 5.
+  No ties are possible after the floor, e.g. 162.0 -> 160, 351 -> 350, 1296 -> 1295, 8208 -> 8210.
+  (Easy x0.85, Impoppable x1.2 use the same rounding.)
+hero:
+  obyn: {cost: 700, medium: 650}   # wiki states $700 on Hard directly. Hero level-ups are never village-discounted
+towers:
+  skywarden:  # ? v57.0 prices applied from patch notes on top of Module:PricesBTD6/data (still v56 for Skywarden); the Skywarden page itself is marked under construction and its upgrade boxes are half-updated
+    base: 220   # medium 205
+    paths:
+      top:
+        - {name: "Aerial Attunement", cost: 150, medium: 140}
+        - {name: "Zephyr Sense", cost: 190, medium: 175}
+        - {name: "Wind Weaver", cost: 1295, medium: 1200}
+        - {name: "Galesage", cost: 3240, medium: 3000}
+        - {name: "Farwind Seer", cost: 20520, medium: 19000}
+      middle:
+        - {name: "Storm's Pulse", cost: 190, medium: 175}
+        - {name: "Thundering Arc", cost: 295, medium: 275}
+        - {name: "Galvanic Conduit", cost: 2700, medium: 2500}
+        - {name: "Thunder's Decree", cost: 3780, medium: 3500}
+        - {name: "Stormwrath Archon", cost: 34560, medium: 32000}
+      bottom:
+        - {name: "Shatterpoint", cost: 160, medium: 150}
+        - {name: "Icebore", cost: 270, medium: 250}
+        - {name: "Coldchain", cost: 1620, medium: 1500}
+        - {name: "Frozen Verdict", cost: 4210, medium: 3900}
+        - {name: "Winter's Mercy", cost: 21600, medium: 20000}
+  monkey_sub:
+    base: 350   # medium 325
+    paths:
+      top:
+        - {name: "Longer Range", cost: 140, medium: 130}
+        - {name: "Advanced Intel", cost: 540, medium: 500}
+        - {name: "Submerge and Support", cost: 755, medium: 700}
+        - {name: "Bloontonium Reactor", cost: 2590, medium: 2400}
+        - {name: "Energizer", cost: 30240, medium: 28000}
+      middle:
+        - {name: "Barbed Darts", cost: 485, medium: 450}
+        - {name: "Heat-tipped Darts", cost: 325, medium: 300}
+        - {name: "Ballistic Missile", cost: 1460, medium: 1350}
+        - {name: "First Strike Capability", cost: 14040, medium: 13000}
+        - {name: "Pre-Emptive Strike", cost: 31320, medium: 29000}
+      bottom:
+        - {name: "Twin Guns", cost: 485, medium: 450}
+        - {name: "Airburst Darts", cost: 1080, medium: 1000}
+        - {name: "Triple Guns", cost: 1190, medium: 1100}
+        - {name: "Armor Piercing Darts", cost: 2700, medium: 2500}
+        - {name: "Sub Commander", cost: 27000, medium: 25000}
+  sniper_monkey:
+    base: 380   # medium 350
+    paths:
+      top:
+        - {name: "Full Metal Jacket", cost: 380, medium: 350}
+        - {name: "Large Caliber", cost: 1405, medium: 1300}  # renamed from 'Large Calibre' in v57.0
+        - {name: "Deadly Precision", cost: 2375, medium: 2200}
+        - {name: "Maim MOAB", cost: 6805, medium: 6300}
+        - {name: "Cripple MOAB", cost: 34560, medium: 32000}
+      middle:
+        - {name: "Night Vision Goggles", cost: 270, medium: 250}
+        - {name: "Shrapnel Shot", cost: 485, medium: 450}
+        - {name: "Bouncing Bullet", cost: 2270, medium: 2100}
+        - {name: "Supply Drop", cost: 8210, medium: 7600}
+        - {name: "Elite Sniper", cost: 12960, medium: 12000}
+      bottom:
+        - {name: "Fast Firing", cost: 485, medium: 450}
+        - {name: "Even Faster Firing", cost: 485, medium: 450}
+        - {name: "Semi-Automatic", cost: 2915, medium: 2700}
+        - {name: "Full Auto Rifle", cost: 4430, medium: 4100}
+        - {name: "Elite Defender", cost: 16090, medium: 14900}
+  druid:
+    base: 430   # medium 400
+    paths:
+      top:
+        - {name: "Hard Thorns", cost: 380, medium: 350}
+        - {name: "Heart of Thunder", cost: 920, medium: 850}
+        - {name: "Druid of the Storm", cost: 1835, medium: 1700}
+        - {name: "Ball Lightning", cost: 4860, medium: 4500}
+        - {name: "Monarch of Storms", cost: 64800, medium: 60000}
+      middle:
+        - {name: "Thorn Swarm", cost: 270, medium: 250}
+        - {name: "Heart of Oak", cost: 380, medium: 350}
+        - {name: "Druid of the Jungle", cost: 1135, medium: 1050}
+        - {name: "Jungle's Bounty", cost: 5290, medium: 4900}
+        - {name: "Spirit of the Forest", cost: 37800, medium: 35000}
+      bottom:
+        - {name: "Druidic Reach", cost: 110, medium: 100}
+        - {name: "Heart of Vengeance", cost: 325, medium: 300}
+        - {name: "Druid of Wrath", cost: 650, medium: 600}
+        - {name: "Poplust", cost: 2540, medium: 2350}
+        - {name: "Avatar of Wrath", cost: 48600, medium: 45000}
+  monkey_village:
+    base: 1295   # medium 1200
+    paths:
+      top:
+        - {name: "Bigger Radius", cost: 430, medium: 400}
+        - {name: "Jungle Drums", cost: 1620, medium: 1500}
+        - {name: "Primary Training", cost: 865, medium: 800}
+        - {name: "Primary Mentoring", cost: 2700, medium: 2500}
+        - {name: "Primary Expertise", cost: 27000, medium: 25000}
+      middle:
+        - {name: "Grow Blocker", cost: 270, medium: 250}
+        - {name: "Radar Scanner", cost: 2160, medium: 2000}
+        - {name: "Monkey Intelligence Bureau", cost: 8100, medium: 7500}
+        - {name: "Call To Arms", cost: 21600, medium: 20000}
+        - {name: "Homeland Defense", cost: 43200, medium: 40000}
+      bottom:
+        - {name: "Monkey Business", cost: 540, medium: 500}
+        - {name: "Monkey Commerce", cost: 540, medium: 500}
+        - {name: "Monkey Town", cost: 10800, medium: 10000}
+        - {name: "Monkey City", cost: 3240, medium: 3000}
+        - {name: "Monkeyopolis", cost: null, medium: null}  # not a fixed price: $5,000 x Banana Farms in radius, same on all difficulties
+  alchemist:
+    base: 595   # medium 550
+    paths:
+      top:
+        - {name: "Larger Potions", cost: 270, medium: 250}
+        - {name: "Acidic Mixture Dip", cost: 380, medium: 350}
+        - {name: "Berserker Brew", cost: 1510, medium: 1400}
+        - {name: "Stronger Stimulant", cost: 3080, medium: 2850}
+        - {name: "Permanent Brew", cost: 51840, medium: 48000}
+      middle:
+        - {name: "Stronger Acid", cost: 270, medium: 250}
+        - {name: "Perishing Potions", cost: 515, medium: 475}
+        - {name: "Unstable Concoction", cost: 3025, medium: 2800}
+        - {name: "Transforming Tonic", cost: 4535, medium: 4200}
+        - {name: "Total Transformation", cost: 48600, medium: 45000}
+      bottom:
+        - {name: "Faster Throwing", cost: 700, medium: 650}
+        - {name: "Acid Pool", cost: 485, medium: 450}
+        - {name: "Lead to Gold", cost: 1080, medium: 1000}
+        - {name: "Rubber to Gold", cost: 2970, medium: 2750}
+        - {name: "Bloon Master Alchemist", cost: 43200, medium: 40000}
+  glue_gunner:
+    base: 245   # medium 225
+    paths:
+      top:
+        - {name: "Glue Soak", cost: 215, medium: 200}
+        - {name: "Corrosive Glue", cost: 325, medium: 300}
+        - {name: "Bloon Dissolver", cost: 2160, medium: 2000}
+        - {name: "Bloon Liquefier", cost: 5400, medium: 5000}
+        - {name: "The Bloon Solver", cost: 24300, medium: 22500}
+      middle:
+        - {name: "Bigger Globs", cost: 110, medium: 100}
+        - {name: "Glue Splatter", cost: 700, medium: 650}  # v57.0: 970 -> 650 (module data still shows 970)
+        - {name: "Glue Hose", cost: 2105, medium: 1950}
+        - {name: "Glue Strike", cost: 4860, medium: 4500}  # v57.0: 4000 -> 4500 (module data still shows 4000)
+        - {name: "Glue Storm", cost: 17280, medium: 16000}
+      bottom:
+        - {name: "Stickier Glue", cost: 300, medium: 280}
+        - {name: "Stronger Glue", cost: 430, medium: 400}
+        - {name: "MOAB Glue", cost: 3890, medium: 3600}
+        - {name: "Relentless Glue", cost: 4320, medium: 4000}
+        - {name: "Super Glue", cost: 25920, medium: 24000}
+village_discount:
+  monkey_business:   # bottom tier 1 (0-0-1)
+    percent: 10
+    applies_to: "base tower purchase + upgrades of tier 1, 2 and 3. Tier 4 and 5 upgrades get no discount"
+    base_tower: >-
+      Yes, but the wiki says it works as a refund: "gives a 10% refund on the purchase of base towers and Heroes
+      placed within said radius". So you pay the full price and get 10% back once the tower is placed inside the radius.
+      The bot's cash check should use the full price for placements.
+    heroes: "the placement is refunded 10% (same sentence). Hero level-ups are not discounted"
+    stacking: "Does not stack. Several Monkey Business villages still give only 10%"
+  monkey_commerce:   # bottom tier 2 (0-0-2)
+    percent: 5   # added on top of Business, so one 0-0-2 village gives 15%
+    applies_to: "same as Business: base tower + tier 1-3 upgrades only"
+    stacking: >-
+      The +5% stacks additively with up to 2 other Commerce villages (in-game: "can stack with up to 2 other Villages
+      with this upgrade"). Max is 10 + 3x5 = 25% for a tower inside the overlap of 3 Commerce villages.
+  max_total_percent: 25
+  rounding: >-
+    Wiki (Discount page): "all Upgrades can only be Discounted to Prices that end in 0 or 5. This is because of
+    rounding. Rounding equation impending." Module:PricesBTD6 says the in-between cases come from village discounts:
+    "Numbers ending in 2.5 round down, while 7.5 round up".  # ? exact formula not on the wiki. Unknown whether the % comes off the Hard price or the Medium price before x1.08. Best guess: round5(hard_price x (1 - pct)), with x2.5 rounding down and x7.5 rounding up. Check one case in-game, e.g. a Druid upgrade read off the panel.
+  range_condition: >-
+    The in-game text says the discount is on purchases made "in the radius of the Village". For village buffs a tower
+    counts as in range when the centre of its footprint is inside the village radius (Range page). Because it applies
+    at purchase time, cash spent before the village or its 0-0-1/0-0-2 upgrade was bought is not refunded.  # ? the wiki doesn't say in so many words that it's not retroactive; that follows from "purchased"/"refund on placement"
+  self_discount: "unknown"   # ? the wiki says nearby villages make each other's upgrades cheaper, but doesn't say whether a village discounts its own upgrades
+  chimps: >-
+    Allowed in CHIMPS. Discount page: Discount "is not banned on CHIMPS Mode". Monkey Commerce page recommends it
+    especially for CHIMPS. The Insider Trades Monkey Knowledge (Business 10% -> 12%) is off because CHIMPS disables
+    Monkey Knowledge. Monkey Town's cash-per-pop does nothing in CHIMPS (removed in v1.5).
+  notes: >-
+    In this run, village1 goes to 0-0-2 before the druid upgrades at r25-30, so every druid/alchemist/glue placement
+    and tier-1-3 upgrade bought inside its radius afterwards should cost 15% less (one village). Druid tier 4/5
+    (Poplust 2540, Avatar of Wrath 48600, Ball Lightning 4860) and Alchemist tier 4/5 stay full price. Sniper, sub and
+    the skywardens were bought before the village, and Obyn is a hero.
+village_range:
+  units: "game units (wiki: range numbers are not pixels; BTD6 uses grid units that scale with resolution)"
+  base: 40
+  bigger_radius: {add: 8, total: 48}       # 1-x-x: "+8, from 40 units to 48 units"
+  jungle_drums: {add: 0, total: 48}        # 2-x-x adds no range (+18% attack speed only); its infobox range is still 48
+  # For reference: Monkey City (x-x-4) +10, Primary Expertise (5-x-x) +8 more. Skywarden 3xx gives villages a range buff (v57.2 note).
+  map_width_units: 286   # Range page: "the range of an entire in-game map is approximately 286 units wide"
+  px_per_unit: null      # ? no pixel conversion on the wiki. Estimate = (on-screen map width in px) / 286, then measure a village's range circle in a screenshot to check
