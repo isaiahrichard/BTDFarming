@@ -42,6 +42,8 @@ class Runner:
         self.tier_overrides: dict[str, str] = {}   # tower id -> crosspath (--set-tiers)
         self.selected: str | None = None    # tower whose upgrade panel we believe is open
         self.wins = 0                       # games won this run (for the summary line)
+        self.losses = 0                     # games lost after all retries (--forever only)
+        self.max_losses_in_a_row = cfg["loss_policy"].get("max_losses_in_a_row", 3)
         self.started_at: float | None = None
         self.fail_count: dict[Action, int] = {}   # consecutive failures per action
         self.min_cash: dict[Action, int] = {}     # don't retry an action until cash exceeds this
@@ -134,6 +136,7 @@ class Runner:
         ("event_continue", "it"),             # all mystery instas revealed
         ("event_mystery_insta", "it"),        # an unrevealed mystery insta (one per click)
         ("event_back", "it"),                 # Collection Event screen: back arrow -> home
+        ("defeat_home", "it"),                # Defeat screen after a lost game (--forever keeps going)
     ]
 
     def go_home(self, timeout: float = 90) -> None:
@@ -170,6 +173,7 @@ class Runner:
         time.sleep(0.5)
         self.started_at = time.monotonic()
         game = 0
+        losses_in_a_row = 0
         while games is None or game < games:
             game += 1
             log.info("=== game %d%s ===", game, "" if games is None else f"/{games}")
@@ -178,7 +182,16 @@ class Runner:
                 self.run_flow("new_game")
             won = self.play_game()
             if not won:
-                raise BotStopped("game lost after using all retries")
+                self.losses += 1
+                losses_in_a_row += 1
+                # One loss in --forever is bad luck (round 63 is close); several in a row means
+                # something is broken, so stop instead of failing all night.
+                if games is not None or losses_in_a_row >= self.max_losses_in_a_row:
+                    raise BotStopped(f"game lost after using all retries ({losses_in_a_row} in a row)")
+                log.warning("game lost; starting a new one (%d loss(es) in a row)", losses_in_a_row)
+                log.info("SUMMARY: %s", self.summary())
+                continue   # next loop: go_home() clicks Home on the Defeat screen, then a new game
+            losses_in_a_row = 0
             self.wins += 1
             log.info("SUMMARY: %s", self.summary())
             if games is None or game < games:
@@ -191,7 +204,8 @@ class Runner:
             return "no games played"
         mins = (time.monotonic() - self.started_at) / 60
         pace = f", {mins / self.wins:.1f} min/win" if self.wins else ""
-        return f"{self.wins} win(s) in {int(mins // 60)}h{int(mins % 60):02d}m{pace}, ~${240 * self.wins} monkey money"
+        lost = f", {self.losses} loss(es)" if self.losses else ""
+        return f"{self.wins} win(s){lost} in {int(mins // 60)}h{int(mins % 60):02d}m{pace}, ~${240 * self.wins} monkey money"
 
     # ---------------------------------------------------------------- one game
     def play_game(self) -> bool:

@@ -59,7 +59,8 @@ village:
   px_per_unit: 9.7
 
 loss_policy:
-  max_retries_per_game: 2       # "Retry last round" this many times, then stop the bot
+  max_retries_per_game: 2       # "Retry last round" this many times, then the game is lost
+  max_losses_in_a_row: 3        # --forever: a lost game starts a new one; this many in a row stops the bot
 
 # Template sequences clicked in order. `optional: true` steps are skipped if not seen quickly.
 # Templates marked "capture" don't exist yet: run `python -m bot.tools --help` to make them.
@@ -70,7 +71,7 @@ menu_flow:
     - {template: mapselect_dark_castle, page_with: mapselect_next_arrow, max_pages: 20}
     - {template: difficulty_hard}
     - {template: mode_chimps}
-    - {template: overwrite_ok, optional: true}   # only when a Dark Castle save exists; not captured yet
+    - {template: overwrite_ok, optional: true}   # only when a Dark Castle save exists (captured 2026-11-08)
     - {template: chimps_intro_ok, timeout: 60}   # after the loading screen
   # After a win the bot uses Runner.go_home(), which reacts to whatever screen shows up
   # (Victory card, rewards card, seasonal Collection Event, Insta reveals) until home.
