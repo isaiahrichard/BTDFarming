@@ -113,7 +113,7 @@ def test_snapshot_restore_rewinds_progress(full_price):
 def test_real_strategy_file_plans_end_to_end(full_price):
     s = Strategy.load(ROOT / "strategies" / "dark_castle_chimps.yaml", COSTS, 11.5)
     actions = run_all(s)
-    assert sum(a.kind == "place" for a in actions) == 15
+    assert sum(a.kind == "place" for a in actions) == 17   # 15 + village2 and glue2 (added 2026-11-08)
     assert s.towers["druid1"].tiers == [0, 1, 5]
     assert s.towers["glue1"].tiers == [0, 2, 4]
 
@@ -128,7 +128,7 @@ def test_skip_to_resumes_mid_game(full_price):
 
 def test_set_tiers_resumes_a_half_done_upgrade(full_price):
     s = Strategy.load(ROOT / "strategies" / "dark_castle_chimps.yaml", COSTS, 11.5)
-    s.skip_to(8)                      # step 8 = sniper1 -> 0-1-1
+    s.skip_to(7)                      # step 7 = sniper1 -> 0-1-1
     s.set_tiers("sniper1", "0-1-0")   # middle tier already bought in-game
     a = s.next_action()
     assert (a.kind, a.tower_id, a.path, a.tier) == ("upgrade", "sniper1", 2, 1)   # bottom tier 1 next

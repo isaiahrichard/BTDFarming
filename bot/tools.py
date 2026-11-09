@@ -119,7 +119,9 @@ RECORDED_TARGETS = {
     "sniper1": (2935, 1050), "obyn": (1745, 805), "druid1": (1575, 775), "druid2": (1435, 750),
     "village1": (1665, 455), "druid3": (1885, 735), "druid4": (1375, 655), "druid5": (1530, 630),
     # druid3 moved up from (1895, 780) on 2026-11-08: it was outside the village's range.
-    "alchemist1": (1655, 686), "druid6": (1450, 525), "druid7": (1818, 625), "glue1": (2012, 660),
+    "alchemist1": (1655, 686), "druid6": (1450, 525), "druid7": (1818, 625),
+    # 2026-11-08 (user): end game moved to the gate; targets from captures/glue1_village2_reference.png.
+    "village2": (1390, 1370), "glue1": (1545, 1270), "glue2": (1180, 1165),
 }
 
 
@@ -152,10 +154,11 @@ def cmd_layout(a):
                 continue
             vil = results.get("village1", (None, None, None))[2]
             accept = None
-            if vil and kind in ("druid", "alchemist", "glue_gunner"):
+            limit = 40 * CFG["village"]["px_per_unit"] - 10
+            if vil and kind in ("druid", "alchemist", "glue_gunner") and math.dist((tx, ty), vil) <= limit:
                 # Must sit inside the village's (measured) 40-unit range, with a 10 px margin,
-                # so the Monkey Business/Commerce discount applies to every upgrade.
-                limit = 40 * CFG["village"]["px_per_unit"] - 10
+                # so the Monkey Business/Commerce discount applies to every upgrade. Towers whose
+                # target is far from the village on purpose (glue2 at the gate) skip this.
                 accept = lambda xy, vil=vil, limit=limit: math.dist(xy, vil) <= limit
             ptr = r.find_valid_pointer(target, (ox, oy), before, max_probes=400, radius=250,
                                        refine=True, accept=accept)
