@@ -7,6 +7,7 @@ States:   MENU --new_game--> IN_GAME --+--> VICTORY --go_home (Next, Home, event
 from __future__ import annotations
 
 import logging
+from collections import Counter
 import time
 from pathlib import Path
 
@@ -52,6 +53,10 @@ class Runner:
         self.placed_by_click = False
         self.valid_redness_max = -12.0      # placement_redness below this = valid (sandbox: valid <= -32, red >= +8)
         self.round: int | None = None       # latest round read off the HUD (for logs)
+        # --sample-until-round N: leave each game once round N is cleared, never retry. Every
+        # game adds one entry: the round it was lost on, or None if it got past round N.
+        self.sample_until: int | None = None
+        self.samples: list[int | None] = []
         self.poll = cfg["vision"]["poll_interval_s"]
         self.keys = cfg["hotkeys"]
 
@@ -180,8 +185,13 @@ class Runner:
             if start_in == "menu" or game > 1:
                 self.go_home()
                 self.run_flow("new_game")
-            won = self.play_game()
-            if not won:
+            result = self.play_game()
+            if result == "sampled":
+                # Already left the game (Pause -> Home) or sitting on Defeat; go_home() at the
+                # top of the loop handles both. Losses are the data here, so never stop on them.
+                log.info("SUMMARY: %s", self.summary())
+                continue
+            if result == "lost":
                 self.losses += 1
                 losses_in_a_row += 1
                 # One loss in --forever is bad luck (round 63 is close); several in a row means
@@ -205,10 +215,39 @@ class Runner:
         mins = (time.monotonic() - self.started_at) / 60
         pace = f", {mins / self.wins:.1f} min/win" if self.wins else ""
         lost = f", {self.losses} loss(es)" if self.losses else ""
+        if self.sample_until is not None:
+            return f"{self.sample_summary()} in {int(mins // 60)}h{int(mins % 60):02d}m"
         return f"{self.wins} win(s){lost} in {int(mins // 60)}h{int(mins % 60):02d}m{pace}, ~${240 * self.wins} monkey money"
 
+    def sample_summary(self) -> str:
+        """One line for the log from self.samples, e.g.
+        "10 sample(s): 6 passed round 17; lost on round 15: 3, round 16: 1"."""
+        passed = self.samples.count(None)
+        # Counter tallies each distinct value: [15, 17, 15] -> {15: 2, 17: 1}.
+        lost_on = Counter(r for r in self.samples if r is not None)
+        line = f"{len(self.samples)} sample(s): {passed} passed round {self.sample_until}"
+        if lost_on:
+            line += "; lost on " + ", ".join(f"round {r}: {n}" for r, n in sorted(lost_on.items()))
+        return line
+
+    def leave_game(self) -> None:
+        """Quit the running game to the home screen: settings gear -> Pause menu -> Home.
+
+        Home has no confirm dialog (checked live 2026-11-09); it goes straight to a loading
+        screen, and go_home() then waits for the home screen.
+        """
+        for _ in range(3):
+            self.inp.click(*self.cfg["game"]["pause_button_px"])
+            if self.wait_until(lambda: self.vision.find("pause_title", self.vision.screenshot()), timeout=2.0):
+                self.click_template("pause_home", timeout=2.0)
+                return
+        img = self.vision.screenshot()
+        raise BotStopped(f"couldn't open the Pause menu to leave the game; screenshot: {self.save_debug(img, 'no_pause')}")
+
     # ---------------------------------------------------------------- one game
-    def play_game(self) -> bool:
+    def play_game(self) -> str:
+        """Play one game. Returns "won", "lost", or "sampled" (--sample-until-round: the game
+        was left after round N, or lost before it; self.samples says which)."""
         strat: Strategy = self.make_strategy()
         if self.from_step:
             strat.skip_to(self.from_step)
@@ -244,15 +283,20 @@ class Runner:
                 continue
             if self.vision.find("victory_text", img) or self.vision.find("victory_next", img):
                 log.info("VICTORY (last round seen: %s)", self.round)
-                return True
+                return "won"
             if self.vision.find("defeat_text", img):
                 self.save_debug(img, f"defeat_round{last_round}")
+                if self.sample_until is not None:
+                    # A retry replays the same state: it would measure the same coin flip twice.
+                    log.warning("SAMPLE: lost on round %s", last_round)
+                    self.samples.append(last_round)
+                    return "sampled"
                 if retries_left <= 0:
                     log.error("defeat on round %s and no retries left", last_round)
-                    return False
+                    return "lost"
                 self.selected = None
                 if not self.retry_last_round(img):
-                    return False
+                    return "lost"
                 retries_left -= 1
                 if last_round in checkpoints:
                     strat.restore(checkpoints[last_round])
@@ -268,6 +312,12 @@ class Runner:
                 log.info("round %d", rnd)
                 last_round = rnd
                 self.round = rnd
+                if self.sample_until is not None and rnd > self.sample_until:
+                    log.info("SAMPLE: passed round %d; leaving the game", self.sample_until)
+                    self.samples.append(None)
+                    self.inp.park()       # drop anything held before clicking the gear
+                    self.leave_game()
+                    return "sampled"
 
             action = strat.next_action()
             cash = self.vision.read_cash(img)

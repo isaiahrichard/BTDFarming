@@ -48,6 +48,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="keep playing games until stopped (hotkey / Ctrl+C / STOP file)")
     ap.add_argument("--start", choices=["ingame", "menu"], default="ingame",
                     help="ingame = a fresh CHIMPS game is already open at round 6 (default)")
+    ap.add_argument("--sample-until-round", type=int, metavar="N",
+                    help="test mode: leave each game once round N is cleared (no retries), and "
+                         "log where games are lost. Use with --forever for a sample of N-round runs")
     ap.add_argument("--from-step", type=int, default=0,
                     help="resume an in-progress game: treat strategy steps before N as done")
     ap.add_argument("--set-tiers", nargs="*", default=[], metavar="ID=T-M-B",
@@ -72,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
                                           cfg["village"]["px_per_unit"])
     runner = Runner(cfg, inp, vision, make_strategy, ROOT / "logs", stop_file)
     runner.from_step = args.from_step
+    runner.sample_until = args.sample_until_round
     runner.tier_overrides = dict(s.split("=", 1) for s in args.set_tiers)
 
     # The stop hotkey (scripts/stop_bot.sh) sends SIGINT, which Python turns into

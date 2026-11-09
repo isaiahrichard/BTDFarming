@@ -33,3 +33,5 @@ popup_knowledge_point: [1330, 1480, 2510, 1580]   # live capture 2026-11-08
 ingame_ff_on: [3565, 1935, 3765, 2095]    # fast-forward ON: glowing arrows, white rim (live 2026-11-08)
 ingame_ff_off: [3565, 1935, 3765, 2095]   # fast-forward OFF during a round
 overwrite_ok: [2040, 1395, 2500, 1525]
+pause_title: [1730, 15, 2110, 145]
+pause_home: [1566, 1554, 1824, 1800]

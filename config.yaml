@@ -24,6 +24,7 @@ game:
   # right x>2450) and the Defeat panel. The old (3000, 1850) sat on the right panel's SELL button!
   safe_click_px: [2150, 2050]
   home_focus_px: [1920, 1560]   # empty sand on the home screen (focus click for --start menu)
+  pause_button_px: [3197, 81]   # settings gear next to the round counter: opens the Pause menu (Esc doesn't)
   # Drag & Drop placement draws the held tower ABOVE the pointer, and the tower lands where it's
   # drawn. Strategy positions are where towers ended up, so the pointer goes this far below them.
   # Measured 2026-11-07: Skywarden at y=1225 turned valid between pointer y=1305 and 1325.
