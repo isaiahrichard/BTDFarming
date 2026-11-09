@@ -25,6 +25,9 @@ steps:
   - {place: {id: sniper1, tower: sniper_monkey, at_px: [2935, 1050], at: [0.7643, 0.4861]}, round: 8}   # sandbox layout 2026-11-08 (target 2935, 1050)
   - {place: {id: obyn, tower: hero_obyn, at_px: [1742, 790], at: [0.4536, 0.3657]}, round: 11}   # sandbox layout 2026-11-08 (target 1745, 805)
   - {place: {id: druid1, tower: druid, at_px: [1575, 770], at: [0.4102, 0.3565]}, round: 12}   # sandbox layout 2026-11-08 (target 1575, 775)
+  # 2026-11-09 (user): Obyn's ability is ready by round 15; one press of 1 at the start of round 15
+  # holds the leak that lost ~1 in 3 games there (sample run: 4/6 without it).
+  - {ability: {id: obyn, key: "1", round: 15}}
   - {place: {id: druid2, tower: druid, at_px: [1428, 738], at: [0.3719, 0.3417]}, round: 15}   # sandbox layout 2026-11-08 (target 1435, 750)
   - {upgrade: {id: sniper1, to: "0-1-1"}, round: 18}
   - {upgrade: {id: sniper1, to: "0-2-1"}, round: 20}
@@ -34,6 +37,8 @@ steps:
   # round 28. They pay full price (no village yet); the village, its upgrades and druid3's upgrades follow.
   - {upgrade: {id: druid1, to: "0-1-1"}}
   - {upgrade: {id: druid2, to: "0-1-1"}}
+  # 2026-11-09 (user): tried druid3 before druid2 for the round-15 leak; at round 15 its spot was
+  # refused 2 of 11 times (game showed red). Obyn's ability (above) holds round 15 instead.
   - {place: {id: druid3, tower: druid, at_px: [1885, 730], at: [0.4909, 0.3380]}, round: 30}   # sandbox layout 2026-11-08 (target 1885, 735)
   # 2026-11-08 (user test): druid3 to 2-0-1 before the village, for round 28 (~$205 of village discount given up).
   - {upgrade: {id: druid3, to: "0-0-1"}}

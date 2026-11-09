@@ -128,7 +128,7 @@ def test_skip_to_resumes_mid_game(full_price):
 
 def test_set_tiers_resumes_a_half_done_upgrade(full_price):
     s = Strategy.load(ROOT / "strategies" / "dark_castle_chimps.yaml", COSTS, 11.5)
-    s.skip_to(7)                      # step 7 = sniper1 -> 0-1-1
+    s.skip_to(8)                      # step 8 = sniper1 -> 0-1-1
     s.set_tiers("sniper1", "0-1-0")   # middle tier already bought in-game
     a = s.next_action()
     assert (a.kind, a.tower_id, a.path, a.tier) == ("upgrade", "sniper1", 2, 1)   # bottom tier 1 next
@@ -165,3 +165,17 @@ def test_wait_until_accepts_numpy_results():
     assert Runner.wait_until(lambda: None, timeout=0.1) is None
     assert Runner.wait_until(lambda: False, timeout=0.1) is False
     assert Runner.wait_until(lambda: (0, 1, 3), timeout=0.1) == (0, 1, 3)
+
+
+def test_ability_step_waits_for_its_round_and_is_used_once(full_price):
+    s = make([{"place": {"id": "obyn", "tower": "hero_obyn", "at_px": [10, 20]}},
+              {"ability": {"id": "obyn", "key": 1, "round": 15}},
+              {"place": {"id": "d1", "tower": "druid", "at_px": [100, 100]}}])
+    s.complete(s.next_action())                      # obyn placed
+    a = s.next_action()
+    assert (a.kind, a.key, a.min_round, a.cost) == ("ability", "1", 15, 0)
+    snap = s.snapshot()
+    s.complete(a)
+    assert s.next_action().tower_id == "d1"          # pressed once, then the strategy moves on
+    s.restore(snap)                                  # 'Retry last round' rewinds it: press again
+    assert s.next_action().kind == "ability"

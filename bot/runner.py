@@ -342,7 +342,8 @@ class Runner:
             if action is not None:
                 if cash is None:
                     log.debug("couldn't read cash this frame (%d in a row)", unreadable)
-                elif cash >= action.cost and cash > self.min_cash.get(action, -1):
+                elif (cash >= action.cost and cash > self.min_cash.get(action, -1)
+                      and (self.round or 0) >= action.min_round):
                     try:
                         self.execute(strat, action, cash)
                     except GameEnded as e:
@@ -407,6 +408,11 @@ class Runner:
             self.place(strat, action, cash_before)
         elif action.kind == "upgrade":
             self.upgrade(strat, action, cash_before)
+        elif action.kind == "ability":
+            # Abilities cost nothing and the game shows no reliable "used" signal we template,
+            # so one press is trusted (like targeting).
+            self.inp.key(action.key)
+            strat.complete(action)
         else:
             self.set_target(strat, action)
 

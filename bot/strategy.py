@@ -37,7 +37,7 @@ class Tower:
 @dataclass(frozen=True)
 class Action:
     """One atomic thing to do in the game."""
-    kind: str                      # "place" | "upgrade" | "target"
+    kind: str                      # "place" | "upgrade" | "target" | "ability"
     tower_id: str
     pos: tuple[int, int]
     cost: int = 0
@@ -46,6 +46,8 @@ class Action:
     tier: int = 0                  # upgrade: tier being bought
     target: str = ""               # target: desired mode
     tab_presses: int = 0           # target: how many Tab presses get there
+    key: str = ""                  # ability: hotkey to press
+    min_round: int = 0             # ability: don't use it before this round
     step_index: int = -1           # which YAML step this belongs to
 
     def describe(self) -> str:
@@ -53,6 +55,8 @@ class Action:
             return f"place {self.tower_id} ({self.tower_kind}) at {self.pos} for ${self.cost}"
         if self.kind == "upgrade":
             return f"upgrade {self.tower_id} {PATHS[self.path]} -> tier {self.tier} for ${self.cost}"
+        if self.kind == "ability":
+            return f"ability {self.tower_id} (key {self.key}) from round {self.min_round}"
         return f"target {self.tower_id} -> {self.target} ({self.tab_presses}x tab)"
 
 
@@ -71,6 +75,7 @@ class Strategy:
         self.towers: dict[str, Tower] = {}
         self.step_index = 0
         self.no_discount: set[str] = set()   # towers the game showed to be out of village range
+        self.abilities_used: set[int] = set()   # step indexes of ability steps already pressed
 
     @classmethod
     def load(cls, strategy_path: Path, costs_path: Path, px_per_unit: float) -> "Strategy":
@@ -149,7 +154,14 @@ class Strategy:
                 return None
             presses = (TARGET_CYCLE.index(g["mode"]) - TARGET_CYCLE.index(t.target)) % len(TARGET_CYCLE)
             return Action("target", t.id, t.pos, target=g["mode"], tab_presses=presses, step_index=i)
-        raise ValueError(f"step {i} has no place/upgrade/target: {step}")
+        if "ability" in step:
+            # One press of an activated ability (e.g. Obyn's), held back until `round`.
+            a = step["ability"]
+            if i in self.abilities_used:
+                return None
+            return Action("ability", a["id"], self.towers[a["id"]].pos, key=str(a["key"]),
+                          min_round=a.get("round", 0), step_index=i)
+        raise ValueError(f"step {i} has no place/upgrade/target/ability: {step}")
 
     def complete(self, action: Action, pos: tuple[int, int] | None = None) -> None:
         """Record that `action` succeeded. `pos` = where a tower actually landed (after nudging)."""
@@ -159,6 +171,8 @@ class Strategy:
             self.towers[action.tower_id].tiers[action.path] = action.tier
         elif action.kind == "target":
             self.towers[action.tower_id].target = action.target
+        elif action.kind == "ability":
+            self.abilities_used.add(action.step_index)
 
     def skip_to(self, step: int) -> None:
         """Pretend steps before `step` are done (towers at their strategy positions).
@@ -176,12 +190,13 @@ class Strategy:
     def snapshot(self) -> dict:
         """Everything needed to rewind to this moment (used for 'Retry last round')."""
         return {"step_index": self.step_index, "towers": copy.deepcopy(self.towers),
-                "no_discount": set(self.no_discount)}
+                "no_discount": set(self.no_discount), "abilities_used": set(self.abilities_used)}
 
     def restore(self, snap: dict) -> None:
         self.step_index = snap["step_index"]
         self.towers = copy.deepcopy(snap["towers"])
         self.no_discount = set(snap.get("no_discount", ()))
+        self.abilities_used = set(snap.get("abilities_used", ()))
 
     @property
     def finished(self) -> bool:
