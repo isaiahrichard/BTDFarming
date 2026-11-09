@@ -439,6 +439,7 @@ class Runner:
         """
         ox, oy = offset
         cur = list(target)
+        probe_shots: list[np.ndarray] = []
 
         def probe(x: float, y: float) -> bool:
             mx, my = self.inp.move_by(x - cur[0], y - cur[1])
@@ -447,6 +448,8 @@ class Runner:
             time.sleep(0.1)   # let the held tower follow the cursor (a few frames)
             tower = (cur[0] - ox, cur[1] - oy)
             img = self.vision.screenshot(park=False)
+            if not probe_shots:
+                probe_shots.append(img)   # the probe at the target itself: evidence if all fail
             delta = self.vision.placement_redness(before_img, img, tower)
             log.debug("probe pointer (%d, %d): redness %s", cur[0], cur[1],
                       "unknown (ring covered)" if delta is None else f"{delta:+.0f}")
@@ -471,7 +474,11 @@ class Runner:
             if probe(target[0] + dx, target[1] + dy):
                 break
         else:
-            log.warning("no valid spot within %d px of %s", radius, target)
+            # Save what the bot saw: the background before pickup and the held tower at the
+            # target (range ring visible), so a red ring can be told apart from a misread.
+            log.warning("no valid spot within %d px of %s; background: %s, held at target: %s",
+                        radius, target, self.save_debug(before_img, "no_spot_before"),
+                        self.save_debug(probe_shots[0], "no_spot_held") if probe_shots else "none")
             return None
         if not refine or (dx, dy) == (0, 0):
             return tuple(cur)
