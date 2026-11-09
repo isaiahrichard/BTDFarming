@@ -421,6 +421,11 @@ class Runner:
             strat.complete(action, landed)   # later upgrade clicks aim at where it really is
             return
         img = self.vision.screenshot()
+        # A Defeat/Victory screen eats the hotkey, so every pickup above fails. That's a lost
+        # game, not a placement bug: report it as GameEnded so the main loop retries / moves on.
+        screen = self.end_screen(img)
+        if screen is not None:
+            raise GameEnded(screen)
         raise BotStopped(f"round {self.round}: couldn't place {action.tower_id}; screenshot: {self.save_debug(img, 'place_failed')}")
 
     def find_valid_pointer(self, target, offset, before_img, max_probes: int = 60,
@@ -506,14 +511,21 @@ class Runner:
             return img if self.vision.panel_side(img) else None
         return self.wait_until(panel_shot, timeout=1.0)
 
+    def end_screen(self, img) -> str | None:
+        """Name of the end-of-game screen showing in `img` ("defeat_text", ...), or None."""
+        for screen in ("defeat_text", "victory_text", "insta_monkey_banner"):
+            if self.vision.find(screen, img):
+                return screen
+        return None
+
     def fresh_cash(self) -> int | None:
         """Read cash from a brand-new screenshot (raises GameEnded if an end screen shows)."""
         img = self.vision.screenshot()
         cash = self.vision.read_cash(img)
         if cash is None:
-            for screen in ("defeat_text", "victory_text", "insta_monkey_banner"):
-                if self.vision.find(screen, img):
-                    raise GameEnded(screen)
+            screen = self.end_screen(img)
+            if screen is not None:
+                raise GameEnded(screen)
         return cash
 
     def upgrade(self, strat: Strategy, action: Action, cash_before: int) -> None:
