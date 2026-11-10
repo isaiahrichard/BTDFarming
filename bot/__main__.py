@@ -55,6 +55,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="resume an in-progress game: treat strategy steps before N as done")
     ap.add_argument("--set-tiers", nargs="*", default=[], metavar="ID=T-M-B",
                     help="after --from-step, correct towers' real tiers, e.g. sniper1=0-1-0")
+    ap.add_argument("--record", action="store_true",
+                    help="search for a valid spot near each strategy position instead of stopping, "
+                         "and save where towers landed to logs/placements_*.json "
+                         "(apply with: python -m bot.tools layout-apply FILE --label 'real game')")
     ap.add_argument("--dry-run", action="store_true", help="log input instead of sending it")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
@@ -77,6 +81,11 @@ def main(argv: list[str] | None = None) -> int:
     runner.from_step = args.from_step
     runner.sample_until = args.sample_until_round
     runner.tier_overrides = dict(s.split("=", 1) for s in args.set_tiers)
+    if args.record:
+        runner.record = True
+        # Colour readings are unreliable in crowded spots (that's why this mode exists), so
+        # test every probe that isn't clearly valid with a real click: the game is the judge.
+        runner.clearly_red_min = float("inf")
 
     # The stop hotkey (scripts/stop_bot.sh) sends SIGINT, which Python turns into
     # KeyboardInterrupt, exactly like Ctrl+C. Treat SIGTERM (plain `pkill`) the same way.

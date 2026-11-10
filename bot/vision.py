@@ -300,15 +300,19 @@ class Vision:
         return out
 
     @staticmethod
-    def segment(img: np.ndarray, band: Box) -> list[tuple[Box, np.ndarray]]:
-        """Split the white, black-outlined game text in `band` into glyphs, left to right.
+    def segment(img: np.ndarray, band: Box, colour: str = "white") -> list[tuple[Box, np.ndarray]]:
+        """Split the black-outlined game text in `band` into glyphs, left to right.
 
-        BTD6 numbers are pure white with a thick black outline, so "very bright in all three
-        channels" isolates the glyph interiors from the busy map behind them.
+        BTD6 numbers are a flat fill with a thick black outline, so matching the fill colour
+        isolates the glyph interiors from the busy map behind them. Cash and round are pure
+        white; the Cash Spent number is flat yellow (BGR 0, 203, 255, measured 2026-11-10).
         """
         x1, y1, x2, y2 = band
         crop = img[y1:y2, x1:x2]
-        mask = np.all(crop > 225, axis=2).astype(np.uint8)
+        if colour == "yellow":
+            mask = ((crop[..., 0] < 60) & (crop[..., 1] > 170) & (crop[..., 2] > 220)).astype(np.uint8)
+        else:
+            mask = np.all(crop > 225, axis=2).astype(np.uint8)
         n, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
         glyphs = []
         for i in range(1, n):
@@ -422,6 +426,45 @@ class Vision:
                 return None
             digits += char
         return int(digits) if digits else None
+
+    def read_cash_spent(self, img: np.ndarray) -> int | None:
+        """The HUD's "Cash Spent" total (a game setting, on since 2026-11-10), or None.
+
+        Unlike cash, it only ever goes up, and only when something is bought: income during a
+        round can't hide a purchase. The number is right-aligned against a receipt icon and
+        grows leftwards, so anchor on the icon and read digits right to left. An open upgrade
+        panel shifts the whole HUD sideways; the band is wide enough for both layouts.
+        """
+        x1, y1, x2, y2 = self.cfg["spent_band"]
+        tpl = self._template("hud_spent")
+        crop = cv2.cvtColor(img[y1:y2, x1:x2], cv2.COLOR_BGR2GRAY)
+        crop = cv2.resize(crop, None, fx=self.scale, fy=self.scale, interpolation=cv2.INTER_AREA)
+        _, score, _, (bx, by) = cv2.minMaxLoc(cv2.matchTemplate(crop, tpl, cv2.TM_CCOEFF_NORMED))
+        if score < 0.7:
+            log.debug("cash-spent icon not found (score %.2f)", score)
+            return None
+        left, top = round(x1 + bx / self.scale), round(y1 + by / self.scale)
+        bottom = round(top + tpl.shape[0] / self.scale)
+        # The number sits beside the lower part of the icon; the "CASH SPENT" label (same
+        # yellow) is above it, so start the band below the label.
+        band = (max(0, left - 600), top + 30, left, bottom)
+        glyphs = self.segment(img, band, colour="yellow")
+        if not glyphs:
+            return None
+        height = max(b[3] - b[1] for b, _ in glyphs)
+        run, edge = [], left
+        for box, mask in reversed(glyphs):          # right to left, starting at the icon
+            if edge - box[2] > height * 0.8:
+                break                                # gap: the number has ended
+            edge = box[0]
+            if box[3] - box[1] >= height * 0.5:      # skip commas (short)
+                run.insert(0, mask)
+        # The leftmost glyph is always the "$". Drop it unread: it can classify as a 5.
+        digits = "".join(self.classify(m)[0] for m in run[1:])
+        if not digits.isdigit():
+            log.debug("cash spent read as %r", digits)
+            return None
+        return int(digits)
 
     def read_round(self, img: np.ndarray) -> int | None:
         text = self._text_line(img, tuple(self.cfg["round_band"]), "/")

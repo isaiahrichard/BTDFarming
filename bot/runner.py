@@ -6,6 +6,7 @@ States:   MENU --new_game--> IN_GAME --+--> VICTORY --go_home (Next, Home, event
 """
 from __future__ import annotations
 
+import json
 import logging
 from collections import Counter
 import time
@@ -53,6 +54,13 @@ class Runner:
         self.placed_by_click = False
         self.valid_redness_max = -12.0      # placement_redness below this = valid (sandbox: valid <= -32, red >= +8)
         self.round: int | None = None       # latest round read off the HUD (for logs)
+        # --record: search for a spot the game accepts near each strategy position (instead of
+        # clicking the position and stopping if it's refused), and save where every tower
+        # landed to logs/placements_*.json. `python -m bot.tools layout-apply FILE` copies
+        # those spots into the strategy, after which normal runs place without searching.
+        self.record = False
+        self.placements: dict[str, dict] = {}
+        self.placements_file: Path | None = None
         # --sample-until-round N: leave each game once round N is cleared, never retry. Every
         # game adds one entry: the round it was lost on, or None if it got past round N.
         self.sample_until: int | None = None
@@ -185,7 +193,12 @@ class Runner:
             if start_in == "menu" or game > 1:
                 self.go_home()
                 self.run_flow("new_game")
+            if self.record:
+                self.placements = {}
+                self.placements_file = self.logs_dir / f"placements_{time.strftime('%Y%m%d-%H%M%S')}.json"
             result = self.play_game()
+            if self.record:
+                self.save_placements(result)
             if result == "sampled":
                 # Already left the game (Pause -> Home) or sitting on Defeat; go_home() at the
                 # top of the loop handles both. Losses are the data here, so never stop on them.
@@ -207,6 +220,13 @@ class Runner:
             if games is None or game < games:
                 self.go_home()      # Victory -> rewards -> any event screens -> home
         log.info("finished %d game(s)", game)
+
+    def save_placements(self, result: str = "in progress") -> None:
+        """Write where each tower landed this game (--record), in the layout-result format."""
+        if self.placements_file is None:
+            return
+        self.logs_dir.mkdir(exist_ok=True)
+        self.placements_file.write_text(json.dumps({"result": result, **self.placements}, indent=1))
 
     def summary(self) -> str:
         """One line for the log: wins, time, pace, monkey money (Dark Castle CHIMPS = $240/win)."""
@@ -447,34 +467,58 @@ class Runner:
     def is_holding(self) -> bool:
         return self.vision.find("holding_cancel_x", self.vision.screenshot(park=False)) is not None
 
-    def drop_here(self) -> bool:
+    def drop_here(self, park_on_fail: bool = True) -> bool:
         """Click to place the held tower. True if it left the cursor (the red X vanished)."""
         self.inp.click_here()
         if not self.wait_until(lambda: not self.is_holding(), timeout=0.6):
-            self.inp.park()   # still held = the spot was refused; drop it over the shop panel
+            if park_on_fail:
+                self.inp.park()   # still held = the spot was refused; drop it over the shop panel
             return False
         return True
 
     def place(self, strat: Strategy, action: Action, cash_before: int) -> None:
+        """Place a tower exactly at its strategy position, or stop the bot.
+
+        Strategy positions are spots a real game accepted (recorded with --record), and the
+        cursor reaches a given pixel the same way every time, so a refused spot means the
+        strategy file is wrong: stop, don't guess. The fix is a --record run.
+
+        Success = the held tower left the cursor (red X gone) AND the HUD's Cash Spent went
+        up. Cash Spent only changes on purchases, so unlike cash it can't be fooled by income.
+        """
         ox, oy = self.cfg["game"]["placement_pointer_offset_px"]
         target = (action.pos[0] + ox, action.pos[1] + oy)   # pointer goes below where the tower lands
+        spent_before = self.vision.read_cash_spent(self.vision.screenshot())
         for attempt in range(3):
+            # A failed pickup (hotkey eaten by a popup) says nothing about the spot: try again.
             before_img = self.pick_up(action.tower_kind, target)
             if before_img is None:
                 continue
             self.placed_by_click = False
-            pointer = self.find_valid_pointer(target, (ox, oy), before_img)
-            if pointer is None:
-                self.inp.park()   # over the shop panel = drop the held tower (Esc would pause)
+            if self.record:
+                pointer = self.find_valid_pointer(target, (ox, oy), before_img)
+                if pointer is None:
+                    self.inp.park()   # over the shop panel = drop the held tower (Esc would pause)
+                    break
+            else:
+                pointer = target
+            # Two clicks before calling a spot refused: a lost click event looks the same.
+            placed = (self.placed_by_click or self.drop_here(park_on_fail=False)
+                      or self.drop_here())
+            if not placed:
+                log.warning("click at %s didn't place %s (still held)", pointer, action.tower_id)
+                if self.record:
+                    continue
                 break
             landed = (round(pointer[0] - ox), round(pointer[1] - oy))
-            if not self.placed_by_click and not self.drop_here():
-                log.warning("click at %s didn't place %s (still held)", pointer, action.tower_id)
-                continue
-            # The red X vanishing already proves the game took it (cash checks were noisy).
+            self.confirm_spent(spent_before, action)
             if landed != action.pos:
                 log.info("%s landed at %s (strategy said %s)", action.tower_id, landed, action.pos)
             strat.complete(action, landed)   # later upgrade clicks aim at where it really is
+            if self.record:
+                self.placements[action.tower_id] = {"kind": action.tower_kind,
+                                                     "target": list(action.pos), "landed": list(landed)}
+                self.save_placements()
             return
         img = self.vision.screenshot()
         # A Defeat/Victory screen eats the hotkey, so every pickup above fails. That's a lost
@@ -482,7 +526,31 @@ class Runner:
         screen = self.end_screen(img)
         if screen is not None:
             raise GameEnded(screen)
-        raise BotStopped(f"round {self.round}: couldn't place {action.tower_id}; screenshot: {self.save_debug(img, 'place_failed')}")
+        hint = "" if self.record else " (strategy position not valid in this game: re-record with --record)"
+        raise BotStopped(f"round {self.round}: couldn't place {action.tower_id} at {action.pos}{hint}; "
+                         f"screenshot: {self.save_debug(img, 'place_failed')}")
+
+    def confirm_spent(self, before: int | None, action: Action) -> None:
+        """After a placement: check the HUD's Cash Spent went up. Stops the bot if it didn't."""
+        def spent_now():
+            v = self.vision.read_cash_spent(self.vision.screenshot())
+            return v if v is not None and before is not None and v > before else None
+        after = self.wait_until(spent_now, timeout=1.5)
+        if after is not None:
+            log.debug("%s: cash spent $%d -> $%d (+%d)", action.tower_id, before, after, after - before)
+            return
+        img = self.vision.screenshot()
+        now = self.vision.read_cash_spent(img)
+        if before is None or now is None:
+            # Can't read the counter (a popup over the HUD?): the red X check already passed.
+            log.warning("%s: couldn't read Cash Spent (before %s, now %s); trusting the red X",
+                        action.tower_id, before, now)
+            return
+        screen = self.end_screen(img)
+        if screen is not None:
+            raise GameEnded(screen)
+        raise BotStopped(f"round {self.round}: {action.tower_id} left the cursor but Cash Spent stayed "
+                         f"${now}; screenshot: {self.save_debug(img, 'spent_unchanged')}")
 
     def find_valid_pointer(self, target, offset, before_img, max_probes: int = 60,
                            radius: int = 120, step: int = 20, refine: bool = False, accept=None):

@@ -11,7 +11,10 @@
   python -m bot.tools layout [--write]         in SANDBOX on Dark Castle: place every tower of the
                                                strategy in order, as close to its target as the game
                                                allows; results go to captures/layout_result.json
-  python -m bot.tools layout-apply [FILE]      copy a layout result's landed spots into the strategy
+  python -m bot.tools layout-apply [FILE] [--label TEXT]
+                                               copy a layout result's landed spots into the strategy;
+                                               FILE can also be a `python -m bot --record` game's
+                                               logs/placements_*.json
 """
 from __future__ import annotations
 
@@ -208,10 +211,14 @@ def cmd_layout(a):
         apply_layout(out)
 
 
-def apply_layout(result_file: Path) -> None:
-    """Copy landed positions from a layout result file into the strategy file."""
+def apply_layout(result_file: Path, label: str = "sandbox layout 2026-11-08") -> None:
+    """Copy landed positions from a layout result file (or a `python -m bot --record` game's
+    logs/placements_*.json) into the strategy file. Only the at_px/at values and the line's
+    comment change, so the file's other comments survive (a YAML round-trip would drop them)."""
     strat_path = ROOT / "strategies" / "dark_castle_chimps.yaml"
     results = json.loads(Path(result_file).read_text())
+    if "result" in results:
+        print(f"recorded game result: {results.pop('result')}")
     text = strat_path.read_text()
     for tid, r in results.items():
         if not r["landed"]:
@@ -220,7 +227,7 @@ def apply_layout(result_file: Path) -> None:
         (lx, ly), (tx, ty) = r["landed"], r["target"]
         pat = re.compile(r"(\{place: \{id: " + re.escape(tid) + r", tower: [a-z_]+, at_px: )\[[^\]]*\], at: \[[^\]]*\](\}[^\n]*?\})[^\n]*")
         text, n = pat.subn(lambda m: f"{m.group(1)}[{lx}, {ly}], at: [{lx / 3840:.4f}, {ly / 2160:.4f}]{m.group(2)}"
-                                     f"   # sandbox layout 2026-11-08 (target {tx}, {ty})", text)
+                                     f"   # {label} (target {tx}, {ty})", text)
         if n != 1:
             print(f"  could not update {tid} in the strategy file")
     strat_path.write_text(text)
@@ -228,7 +235,7 @@ def apply_layout(result_file: Path) -> None:
 
 
 def cmd_layout_apply(a):
-    apply_layout(Path(a.file))
+    apply_layout(Path(a.file), a.label)
 
 
 def main():
@@ -245,6 +252,7 @@ def main():
     p = sub.add_parser("layout"); p.add_argument("--write", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true"); p.set_defaults(f=cmd_layout)
     p = sub.add_parser("layout-apply"); p.add_argument("file", nargs="?", default=str(ROOT / "captures" / "layout_result.json"))
+    p.add_argument("--label", default="sandbox layout 2026-11-08", help="comment written on each updated line")
     p.set_defaults(f=cmd_layout_apply)
     a = ap.parse_args()
     a.f(a)

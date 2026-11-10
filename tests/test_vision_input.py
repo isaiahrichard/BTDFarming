@@ -110,3 +110,13 @@ def test_fast_forward_state_is_read_from_the_button(vision):
     assert vision.fast_forward_state(shot("ff_on_live.png")) == "on"
     assert vision.fast_forward_state(shot("ff_off_live.png")) == "off"
     assert vision.fast_forward_state(shot("ingame_r6_650.png")) is None   # between rounds: play button
+
+
+@pytest.mark.parametrize("name", ["spent_12320.png", "spent_12320_panel_left.png", "spent_12320_panel_right.png"])
+def test_reads_cash_spent_in_every_hud_layout(vision, name):
+    # With the right-hand panel open the "$" alone reads as a 5 (512320); it must be dropped.
+    assert vision.read_cash_spent(shot(name)) == 12320
+
+
+def test_cash_spent_is_none_without_the_setting(vision):
+    assert vision.read_cash_spent(shot("ingame_r6_650.png")) is None

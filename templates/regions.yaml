@@ -35,3 +35,4 @@ ingame_ff_off: [3565, 1935, 3765, 2095]   # fast-forward OFF during a round
 overwrite_ok: [2040, 1395, 2500, 1525]
 pause_title: [1730, 15, 2110, 145]
 pause_home: [1566, 1554, 1824, 1800]
+hud_spent: [2645, 30, 2750, 156]
