@@ -12,6 +12,7 @@ import logging
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import yaml
@@ -59,6 +60,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="search for a valid spot near each strategy position instead of stopping, "
                          "and save where towers landed to logs/placements_*.json "
                          "(apply with: python -m bot.tools layout-apply FILE --label 'real game')")
+    ap.add_argument("--delay", type=int, default=10, metavar="SECONDS",
+                    help="wait this long before touching the mouse, so you can set up your "
+                         "screens (default 10; 0 to start at once)")
     ap.add_argument("--dry-run", action="store_true", help="log input instead of sending it")
     ap.add_argument("-v", "--verbose", action="store_true")
     args = ap.parse_args(argv)
@@ -94,6 +98,9 @@ def main(argv: list[str] | None = None) -> int:
     # from the shell, and Python keeps that, so the hotkey would do nothing. Re-enable it.
     signal.signal(signal.SIGINT, signal.default_int_handler)
     try:
+        for left in range(args.delay, 0, -1):
+            log.info("starting in %d s…", left)
+            time.sleep(1)
         runner.run(games=None if args.forever else args.games, start_in=args.start)
     except BotStopped as e:
         log.error("STOPPED at round %s: %s", runner.round, e)
